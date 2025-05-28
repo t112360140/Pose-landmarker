@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaPipe 姿勢偵測 (附鏡頭選擇)</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <h1>MediaPipe 姿勢偵測</h1>
+
+    <div class="controls">
+        <label for="cameraSelection">選擇鏡頭：</label>
+        <select id="cameraSelection"></select>
+    </div>
+
+    <div class="container">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="output_canvas"></canvas>
+    </div>
+    <p class="status" id="status"></p>
+
+    <script>
+        (function(){var script=document.createElement('script');script.src='https://chenghao.com.tw/Tool/eruda/eruda/eruda.js';document.body.append(script);script.onload=function(){eruda.init();}})();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
