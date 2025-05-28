@@ -146,12 +146,12 @@ async function predictWebcam() {
                 });
 
                 // 取得左右肩膀的關鍵點
-                const leftShoulder = landmark[PoseLandmarker.POSE_LANDMARKS.LEFT_SHOULDER];
-                const rightShoulder = landmark[PoseLandmarker.POSE_LANDMARKS.RIGHT_SHOULDER];
+                const leftShoulder = landmark[0][11];
+                const rightShoulder = landmark[0][12];
 
                 // 取得左右肩膀的真實世界關鍵點 (公尺)
-                const leftShoulderWorld = worldLandmark[PoseLandmarker.POSE_LANDMARKS.LEFT_SHOULDER];
-                const rightShoulderWorld = worldLandmark[PoseLandmarker.POSE_LANDMARKS.RIGHT_SHOULDER];
+                const leftShoulderWorld = worldLandmark[1][11];
+                const rightShoulderWorld = worldLandmark[1][12];
 
                 // 確保關鍵點存在
                 if (leftShoulder && rightShoulder && leftShoulderWorld && rightShoulderWorld) {
