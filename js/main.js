@@ -9,7 +9,6 @@ const canvasElement = document.getElementById("output_canvas");
 const canvasCtx = canvasElement.getContext("2d");
 const statusElement = document.getElementById("status");
 const cameraSelection = document.getElementById("cameraSelection");
-// 新增的元素，用於顯示肩膀距離
 const shoulderDistanceDisplay = document.getElementById("shoulderDistanceDisplay");
 
 
@@ -133,9 +132,10 @@ async function predictWebcam() {
 
         if (detections.landmarks && detections.landmarks.length > 0) {
             for (let i = 0; i < detections.landmarks.length; i++) {
-                const landmark = detections.landmarks[i]; // 2D 畫布座標
+                const landmark = detections.landmarks[i]; // 2D 畫布座標 (正規化)
                 const worldLandmark = detections.worldLandmarks[i]; // 3D 世界座標 (公尺)
 
+                // 繪製骨架
                 drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS, {
                     color: "#00FF00",
                     lineWidth: 4
@@ -145,38 +145,52 @@ async function predictWebcam() {
                     lineWidth: 2
                 });
 
-                // 取得左右肩膀的關鍵點
-                const leftShoulder = landmark[11];
-                const rightShoulder = landmark[12];
-
-                // 取得左右肩膀的真實世界關鍵點 (公尺)
-                const leftShoulderWorld = landmark[11];
-                const rightShoulderWorld = landmark[12];
+                // 取得左右肩膀的關鍵點索引
+                const LEFT_SHOULDER = 11;
+                const RIGHT_SHOULDER = 12;
 
                 // 確保關鍵點存在
-                if (leftShoulder && rightShoulder && leftShoulderWorld && rightShoulderWorld) {
-                    // 計算畫面上像素距離
-                    // 關鍵點的 x, y 座標是標準化值 (0到1)，需要乘以畫布的實際寬高
-                    const pixelX1 = leftShoulder.x * canvasElement.width;
-                    const pixelY1 = leftShoulder.y * canvasElement.height;
-                    const pixelX2 = rightShoulder.x * canvasElement.width;
-                    const pixelY2 = rightShoulder.y * canvasElement.height;
+                if (landmark[LEFT_SHOULDER] && landmark[RIGHT_SHOULDER] &&
+                    worldLandmark[LEFT_SHOULDER] && worldLandmark[RIGHT_SHOULDER]) {
+
+                    // 1. 計算畫面上像素距離 (來自 normalized landmarks)
+                    const leftShoulderPx = {
+                        x: landmark[LEFT_SHOULDER].x * canvasElement.width,
+                        y: landmark[LEFT_SHOULDER].y * canvasElement.height
+                    };
+                    const rightShoulderPx = {
+                        x: landmark[RIGHT_SHOULDER].x * canvasElement.width,
+                        y: landmark[RIGHT_SHOULDER].y * canvasElement.height
+                    };
 
                     const pixelDistance = Math.sqrt(
-                        Math.pow(pixelX2 - pixelX1, 2) + Math.pow(pixelY2 - pixelY1, 2)
+                        Math.pow(rightShoulderPx.x - leftShoulderPx.x, 2) +
+                        Math.pow(rightShoulderPx.y - leftShoulderPx.y, 2)
                     );
 
-                    // 計算真實世界公尺距離 (使用 3D 距離公式)
-                    const worldDistance = Math.sqrt(
+                    // 2. 計算真實世界 3D 距離 (來自 worldLandmarks)
+                    const leftShoulderWorld = worldLandmark[LEFT_SHOULDER];
+                    const rightShoulderWorld = worldLandmark[RIGHT_SHOULDER];
+
+                    const trueWorld3DDistance = Math.sqrt(
                         Math.pow(rightShoulderWorld.x - leftShoulderWorld.x, 2) +
                         Math.pow(rightShoulderWorld.y - leftShoulderWorld.y, 2) +
                         Math.pow(rightShoulderWorld.z - leftShoulderWorld.z, 2)
                     );
 
+                    // 3. 計算投影世界距離 (公尺) - 忽略 Z 軸，只在 XY 平面計算距離
+                    // 這是您想要的"映射在畫面上實際的距離(公尺)"的最佳近似值，
+                    // 它代表了在正面視角下，肩膀在真實世界中的平面距離
+                    const projectedWorldDistanceXY = Math.sqrt(
+                        Math.pow(rightShoulderWorld.x - leftShoulderWorld.x, 2) +
+                        Math.pow(rightShoulderWorld.y - leftShoulderWorld.y, 2)
+                    );
+
                     distanceOutputHTML += `
                         <p><strong>人物 ${i + 1}:</strong></p>
-                        <p>肩膀距離 (像素): ${pixelDistance.toFixed(2)} px</p>
-                        <p>肩膀距離 (公尺): ${worldDistance.toFixed(2)} m</p>
+                        <p>肩膀距離 (畫布像素): ${pixelDistance.toFixed(2)} px</p>
+                        <p>肩膀距離 (真實 3D 世界, 公尺): ${trueWorld3DDistance.toFixed(2)} m</p>
+                        <p>肩膀距離 (XY 平面投影, 公尺): ${projectedWorldDistanceXY.toFixed(2)} m</p>
                     `;
                 } else {
                     distanceOutputHTML += `<p><strong>人物 ${i + 1}:</strong> 無法偵測到完整的肩膀關鍵點。</p>`;
