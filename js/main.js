@@ -150,8 +150,8 @@ async function predictWebcam() {
                 const rightShoulder = landmark[0][12];
 
                 // 取得左右肩膀的真實世界關鍵點 (公尺)
-                const leftShoulderWorld = worldLandmark[1][11];
-                const rightShoulderWorld = worldLandmark[1][12];
+                const leftShoulderWorld = landmark[1][11];
+                const rightShoulderWorld = landmark[1][12];
 
                 // 確保關鍵點存在
                 if (leftShoulder && rightShoulder && leftShoulderWorld && rightShoulderWorld) {
