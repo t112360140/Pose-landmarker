@@ -9,6 +9,9 @@ const canvasElement = document.getElementById("output_canvas");
 const canvasCtx = canvasElement.getContext("2d");
 const statusElement = document.getElementById("status");
 const cameraSelection = document.getElementById("cameraSelection");
+// 新增的元素，用於顯示肩膀距離
+const shoulderDistanceDisplay = document.getElementById("shoulderDistanceDisplay");
+
 
 let poseLandmarker = undefined;
 let runningMode = "VIDEO";
@@ -28,7 +31,7 @@ async function createPoseLandmarker() {
             delegate: "GPU",
         },
         runningMode: runningMode,
-        numPoses: 3,
+        numPoses: 3, // 允許多人偵測
         minPoseDetectionConfidence:0.8,
         minPosePresenceConfidence:0.8,
         minTrackingConfidence:0.8,
@@ -110,9 +113,6 @@ async function setupCamera() {
 }
 
 
-let enableWebcamButton;
-let webcamRunning = false;
-
 // 預測姿勢函式
 async function predictWebcam() {
     // 設置畫布尺寸與影片相同
@@ -129,8 +129,13 @@ async function predictWebcam() {
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
-        if (detections.landmarks) {
-            for (const landmark of detections.landmarks) {
+        let distanceOutputHTML = ""; // 用於累積顯示的HTML
+
+        if (detections.landmarks && detections.landmarks.length > 0) {
+            for (let i = 0; i < detections.landmarks.length; i++) {
+                const landmark = detections.landmarks[i]; // 2D 畫布座標
+                const worldLandmark = detections.worldLandmarks[i]; // 3D 世界座標 (公尺)
+
                 drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS, {
                     color: "#00FF00",
                     lineWidth: 4
@@ -139,8 +144,48 @@ async function predictWebcam() {
                     color: "#FF0000",
                     lineWidth: 2
                 });
+
+                // 取得左右肩膀的關鍵點
+                const leftShoulder = landmark[PoseLandmarker.POSE_LANDMARKS.LEFT_SHOULDER];
+                const rightShoulder = landmark[PoseLandmarker.POSE_LANDMARKS.RIGHT_SHOULDER];
+
+                // 取得左右肩膀的真實世界關鍵點 (公尺)
+                const leftShoulderWorld = worldLandmark[PoseLandmarker.POSE_LANDMARKS.LEFT_SHOULDER];
+                const rightShoulderWorld = worldLandmark[PoseLandmarker.POSE_LANDMARKS.RIGHT_SHOULDER];
+
+                // 確保關鍵點存在
+                if (leftShoulder && rightShoulder && leftShoulderWorld && rightShoulderWorld) {
+                    // 計算畫面上像素距離
+                    // 關鍵點的 x, y 座標是標準化值 (0到1)，需要乘以畫布的實際寬高
+                    const pixelX1 = leftShoulder.x * canvasElement.width;
+                    const pixelY1 = leftShoulder.y * canvasElement.height;
+                    const pixelX2 = rightShoulder.x * canvasElement.width;
+                    const pixelY2 = rightShoulder.y * canvasElement.height;
+
+                    const pixelDistance = Math.sqrt(
+                        Math.pow(pixelX2 - pixelX1, 2) + Math.pow(pixelY2 - pixelY1, 2)
+                    );
+
+                    // 計算真實世界公尺距離 (使用 3D 距離公式)
+                    const worldDistance = Math.sqrt(
+                        Math.pow(rightShoulderWorld.x - leftShoulderWorld.x, 2) +
+                        Math.pow(rightShoulderWorld.y - leftShoulderWorld.y, 2) +
+                        Math.pow(rightShoulderWorld.z - leftShoulderWorld.z, 2)
+                    );
+
+                    distanceOutputHTML += `
+                        <p><strong>人物 ${i + 1}:</strong></p>
+                        <p>肩膀距離 (像素): ${pixelDistance.toFixed(2)} px</p>
+                        <p>肩膀距離 (公尺): ${worldDistance.toFixed(2)} m</p>
+                    `;
+                } else {
+                    distanceOutputHTML += `<p><strong>人物 ${i + 1}:</strong> 無法偵測到完整的肩膀關鍵點。</p>`;
+                }
             }
+        } else {
+            distanceOutputHTML = "<p>未偵測到任何人。</p>";
         }
+        shoulderDistanceDisplay.innerHTML = distanceOutputHTML; // 更新顯示區塊
         canvasCtx.restore();
     }
 

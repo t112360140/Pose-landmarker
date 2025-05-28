@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediaPipe 姿勢偵測 (附鏡頭選擇)</title>
+    <title>MediaPipe 姿勢偵測</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -19,6 +19,14 @@
         <canvas id="output_canvas"></canvas>
     </div>
     <p class="status" id="status"></p>
+
+    <!-- 新增的顯示距離資訊的區塊 -->
+    <div class="distance-info">
+        <h2>偵測到的肩膀距離</h2>
+        <div id="shoulderDistanceDisplay">
+            <p>等待偵測...</p>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js"></script>
     <script type="module" src="js/main.js"></script>
